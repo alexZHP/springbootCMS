@@ -1,0 +1,160 @@
+package com.ritu.cms.base.where;
+
+import java.io.Serializable;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+
+import com.ritu.cms.common.utils.CommonUtils;
+import com.ritu.cms.index.annotation.Column;
+import com.ritu.cms.reflect.utils.PropertyUtil;
+
+public class SqlUtil {
+	
+	private static final String LNG = "lng";
+	private static final String LAT = "lat";
+	private static final String LOCATION = "location";
+	private static final String POLY_EDGE = "poly_edge";
+	private static final String LINE_EDGE = "line_edge";
+	private static final String UNDER_LINE = "_";
+			
+	
+	/**
+	 * 
+	 * 方法名：<br>
+	 * 描述：<br>
+	 * 创建时间：2018年9月5日 上午11:33:41<br>
+	 * 
+	 * @author 阮建钧<br>
+	 * @param clazz
+	 * @return<br>
+	 */
+	public static String getTableFields(Class<?> clazz) {
+		Long start = System.currentTimeMillis();
+		Field[] fields = clazz.getDeclaredFields();
+		StringBuffer columns = new StringBuffer("");
+		if (fields != null) {
+			Arrays.stream(fields).forEach(field -> {
+				String fieldName = field.getName();
+				Annotation[] annotations = field.getAnnotations();
+				if (annotations != null && annotations.length > 0) {
+					if (field.isAnnotationPresent(Column.class)) {
+						Column column = (Column) field.getAnnotation(Column.class);
+						if (column.isGeom()) {
+							switch (column.coordType()) {
+							case LNG :
+								columns.append(SqlEnum.LNG.getSql());
+								break;
+							case LAT :
+								columns.append(SqlEnum.LAT.getSql());
+								break;
+							case LOCATION :
+								columns.append(SqlEnum.LOCATION.getSql());
+								break;
+							case POLY_EDGE :
+								columns.append(SqlEnum.POLY_EDGE.getSql());
+								break;
+							case LINE_EDGE :
+								columns.append(SqlEnum.LINE_EDGE.getSql());
+								break;
+							default:
+								break;
+							}
+						} else {
+							columns.append(
+									CommonUtils.isNotEmptry(column.name()) ? column.name() : toTableString(fieldName));
+						}
+						columns.append(" as ").append(fieldName).append(",");
+					}
+				}
+			});
+			return columns.substring(0, columns.length() - 1);
+		}
+		System.out.println("耗时：" + (System.currentTimeMillis() - start) + "ms");
+		return columns.toString();
+	}
+
+	/**
+	 * 
+	 * 方法名：<br>
+	 * 描述：列表字段赋值<br>
+	 * 创建时间：2018年9月5日 下午5:55:15<br>
+	 * @author 阮建钧<br>
+	 * @param entity
+	 * @param fileName
+	 * @param fileValue<br>
+	 * @throws IllegalAccessException 
+	 * @throws InstantiationException 
+	 */
+	public static <T> List<T> setListFileValue(List<Map<String, Object>> selectList, Class<T> clazz) {
+		List<T> resultList = new ArrayList<>();
+		selectList.forEach(map -> {
+			T entity = setEntityFileValue(map, clazz);
+			resultList.add(entity);
+		});
+		return resultList;
+	}
+	
+	/**
+	 * 
+	 * 方法名：<br>
+	 * 描述：单个实体字段赋值<br>
+	 * 创建时间：2018年9月7日 下午3:20:40<br>
+	 * @author 阮建钧<br>
+	 * @param map
+	 * @param clazz
+	 * @return<br>
+	 */
+	public static <T> T setEntityFileValue(Map<String, Object> map, Class<T> clazz){
+		if (map == null) {
+			return null;
+		}
+		T entity = null;
+		try {
+			entity = clazz.newInstance();
+		} catch (InstantiationException e) {
+			e.printStackTrace();
+		} catch (IllegalAccessException e) {
+			e.printStackTrace();
+		}
+		for (Map.Entry<String, Object> entry : map.entrySet()) {
+			String fileName = entry.getKey();
+			Serializable fileValue = (Serializable) entry.getValue();
+			if (null != fileValue) {
+				Field[] fields = clazz.getDeclaredFields();
+				if (fields != null) {
+					for (Field field : fields) {
+						if (fileName.equalsIgnoreCase(field.getName())) {
+							PropertyUtil.setProperty(entity, field.getName(), fileValue);
+						}
+					}
+				}
+			}
+		}
+		return entity;
+	}
+
+	/**
+	 * 
+	 * 方法名：<br>
+	 * 描述：驼峰转下划线<br>
+	 * 创建时间：2018年9月5日 下午1:36:35<br>
+	 * 
+	 * @author 阮建钧<br>
+	 * @param text
+	 * @return<br>
+	 */
+	public static String toTableString(String text) {
+		String tName = text.substring(0, 1).toLowerCase();
+		for (int i = 1; i < text.length(); i++) {
+			if (!Character.isLowerCase(text.charAt(i))) {
+				tName += UNDER_LINE;
+			}
+			tName += text.substring(i, i + 1);
+		}
+		return tName.toLowerCase();
+	}
+}

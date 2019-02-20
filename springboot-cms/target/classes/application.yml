@@ -1,0 +1,24 @@
+server:
+  port: 9080
+
+
+spring:
+  datasource:
+     driver-class-name: com.mysql.jdbc.Driver
+     url: jdbc:mysql://191.168.230.188:3306/cms?useUnicode=true&characterEncoding=utf-8
+     username: root
+     password: root
+
+
+     thymeleaf:
+       mode: HTML5
+       encoding: UTF-8
+       content-type: text/html
+       cache: false
+
+     aop: 
+       auto: true
+
+mybatis:
+  mapper-locations: classpath:mapping/*.xml
+  type-aliases-package: com.ritu.cms.pojo
